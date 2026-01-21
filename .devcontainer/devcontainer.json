@@ -1,0 +1,24 @@
+{
+  "name": "Angular App Test",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "forwardPorts": [4300],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "angular.ng-template",
+        "pno33.vscode-angular-schematics",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  },
+  "portsAttributes": {
+    "4300": {
+      "label": "Angular App Test",
+      "onAutoForward": "notify"
+    }
+  },
+  "remoteUser": "node"
+}
