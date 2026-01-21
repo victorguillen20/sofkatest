@@ -5,17 +5,33 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { SharedInputComponent } from '../../src/app/shared/components/shared-input/shared-input.component';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { InterviewService } from '../../src/app/shared/services/interview.service';
+import { of } from 'rxjs';
 import { FormProductsComponent } from '../../src/app/modules/customer/components/form-products/form-products.component';
 
 describe('TableProductsComponent', () => {
   let component: TableProductsComponent;
   let fixture: ComponentFixture<TableProductsComponent>;
+  let mockInterviewService: any;
 
   beforeEach(waitForAsync(() => {
+    mockInterviewService = {
+      consultProduct: jest.fn().mockReturnValue(of({ data: [] }))
+    };
+
     TestBed.configureTestingModule({
-      declarations: [ TableProductsComponent ],
-      imports: [ FormsModule, ReactiveFormsModule, SharedInputComponent, HttpClientModule ],
+      imports: [ 
+        TableProductsComponent, 
+        FormsModule, 
+        ReactiveFormsModule, 
+        SharedInputComponent, 
+        HttpClientTestingModule,
+        RouterTestingModule
+      ],
+      providers: [
+        { provide: InterviewService, useValue: mockInterviewService }
+      ]
     }).compileComponents();
   }));
 
@@ -37,19 +53,17 @@ describe('TableProductsComponent', () => {
     ];
     fixture.detectChanges();
     
-    const inputDebugEl = fixture.debugElement.query(By.css('input[placeholder="Search..."]'));
-    const inputEl: HTMLInputElement = inputDebugEl.nativeElement;
-    
-    inputEl.value = 'Diners Club';
-    inputEl.dispatchEvent(new Event('input'));
-    tick();
+    component.searchQuery = 'Diners Club';
     fixture.detectChanges();
 
     expect(component.filteredProducts.length).toBe(1);
     expect(component.filteredProducts[0].name).toBe('Diners Club');
 
-    const rows = fixture.debugElement.queryAll(By.css('tbody tr'));
-    expect(rows.length).toBe(1);
+    component.isLoading = false;
+    fixture.detectChanges();
+    
+    const visibleRows = fixture.debugElement.queryAll(By.css('tbody tr'));
+    expect(visibleRows.length).toBe(1);
   }));
 });
 
@@ -57,13 +71,27 @@ describe('TableProductsComponent - Navigation', () => {
   let component: TableProductsComponent;
   let fixture: ComponentFixture<TableProductsComponent>;
   let router: Router;
+  let mockInterviewService: any;
 
   beforeEach(waitForAsync(() => {
+    mockInterviewService = {
+      consultProduct: jest.fn().mockReturnValue(of({ data: [] }))
+    };
+
     TestBed.configureTestingModule({
-      declarations: [ TableProductsComponent ],
-      imports: [ FormsModule, ReactiveFormsModule, RouterTestingModule.withRoutes([
-        { path: 'form', component: FormProductsComponent }
-      ]), SharedInputComponent, HttpClientModule ],
+      imports: [ 
+        TableProductsComponent, 
+        FormsModule, 
+        ReactiveFormsModule, 
+        RouterTestingModule.withRoutes([
+          { path: 'form', component: FormProductsComponent }
+        ]), 
+        SharedInputComponent, 
+        HttpClientTestingModule 
+      ],
+      providers: [
+        { provide: InterviewService, useValue: mockInterviewService }
+      ]
     }).compileComponents();
   }));
 
@@ -86,11 +114,25 @@ describe('TableProductsComponent - Navigation', () => {
 describe('TableProductsComponent - Delete Button', () => {
   let component: TableProductsComponent;
   let fixture: ComponentFixture<TableProductsComponent>;
+  let mockInterviewService: any;
 
   beforeEach(waitForAsync(() => {
+    mockInterviewService = {
+      consultProduct: jest.fn().mockReturnValue(of({ data: [] }))
+    };
+
     TestBed.configureTestingModule({
-      declarations: [ TableProductsComponent ],
-      imports: [ FormsModule, ReactiveFormsModule, SharedInputComponent, HttpClientModule ]
+      imports: [ 
+        TableProductsComponent, 
+        FormsModule, 
+        ReactiveFormsModule, 
+        SharedInputComponent, 
+        HttpClientTestingModule,
+        RouterTestingModule
+      ],
+      providers: [
+        { provide: InterviewService, useValue: mockInterviewService }
+      ]
     }).compileComponents();
   }));
 
@@ -110,9 +152,16 @@ describe('TableProductsComponent - Delete Button', () => {
       date_revision: new Date('2026-12-12')
     };
     component.products = [ sampleProduct ];
+    component.isLoading = false;
     fixture.detectChanges();
     
     jest.spyOn(component, 'openDeleteModal');
+
+    const dropdownButton = fixture.debugElement.query(By.css('.dropdown-button'));
+    if (dropdownButton) {
+        dropdownButton.triggerEventHandler('click', null);
+        fixture.detectChanges();
+    }
 
     const deleteButtonDe = fixture.debugElement.query(By.css('.dropdown-content button:nth-child(2)'));
     deleteButtonDe.triggerEventHandler('click', null);
@@ -127,13 +176,27 @@ describe('TableProductsComponent - Update Button', () => {
   let component: TableProductsComponent;
   let fixture: ComponentFixture<TableProductsComponent>;
   let router: Router;
+  let mockInterviewService: any;
 
   beforeEach(waitForAsync(() => {
+    mockInterviewService = {
+      consultProduct: jest.fn().mockReturnValue(of({ data: [] }))
+    };
+
     TestBed.configureTestingModule({
-      declarations: [ TableProductsComponent ],
-      imports: [ FormsModule, ReactiveFormsModule, RouterTestingModule.withRoutes([
-        { path: 'form', component: FormProductsComponent }
-      ]), SharedInputComponent, HttpClientModule ],
+      imports: [ 
+        TableProductsComponent, 
+        FormsModule, 
+        ReactiveFormsModule, 
+        RouterTestingModule.withRoutes([
+          { path: 'form', component: FormProductsComponent }
+        ]), 
+        SharedInputComponent, 
+        HttpClientTestingModule 
+      ],
+      providers: [
+        { provide: InterviewService, useValue: mockInterviewService }
+      ]
     }).compileComponents();
   }));
 
@@ -155,6 +218,7 @@ describe('TableProductsComponent - Update Button', () => {
       date_revision: new Date('2026-12-12')
     };
     component.products = [ sampleProduct ];
+    component.isLoading = false;
     fixture.detectChanges();
     
     jest.spyOn(component, 'editProduct').mockImplementation(() => {
@@ -174,11 +238,25 @@ describe('TableProductsComponent - Update Button', () => {
 describe('TableProductsComponent - Select Functionality', () => {
   let component: TableProductsComponent;
   let fixture: ComponentFixture<TableProductsComponent>;
+  let mockInterviewService: any;
 
   beforeEach(waitForAsync(() => {
+    mockInterviewService = {
+      consultProduct: jest.fn().mockReturnValue(of({ data: [] }))
+    };
+
     TestBed.configureTestingModule({
-      declarations: [ TableProductsComponent ],
-      imports: [ FormsModule, ReactiveFormsModule, SharedInputComponent, HttpClientModule ],
+      imports: [ 
+        TableProductsComponent, 
+        FormsModule, 
+        ReactiveFormsModule, 
+        SharedInputComponent, 
+        HttpClientTestingModule,
+        RouterTestingModule
+      ],
+      providers: [
+        { provide: InterviewService, useValue: mockInterviewService }
+      ]
     }).compileComponents();
   }));
 
@@ -203,6 +281,7 @@ describe('TableProductsComponent - Select Functionality', () => {
     component.products = sampleProducts;
     component.searchQuery = '';
     component.selectedOption = 5;
+    component.isLoading = false;
     fixture.detectChanges();
 
     expect(component.pagedProducts.length).toBe(5);

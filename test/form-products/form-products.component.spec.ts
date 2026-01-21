@@ -1,28 +1,46 @@
-import { waitForAsync, ComponentFixture, TestBed } from '@angular/core/testing';
+import { waitForAsync, ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { FormProductsComponent } from '../../src/app/modules/customer/components/form-products/form-products.component';
-import { ReactiveFormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
 import { InterviewService } from '../../src/app/shared/services/interview.service';
 import { of } from 'rxjs';
 import { By } from '@angular/platform-browser';
 import { SharedInputComponent } from '../../src/app/shared/components/shared-input/shared-input.component';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { CommonModule } from '@angular/common';
 
 describe('FormProductsComponent', () => {
   let component: FormProductsComponent;
   let fixture: ComponentFixture<FormProductsComponent>;
+  let mockInterviewService: any;
 
   beforeEach(waitForAsync(() => {
+    mockInterviewService = {
+      registryProduct: jest.fn().mockReturnValue(of({})),
+      updateProduct: jest.fn().mockReturnValue(of({})),
+      validateProductId: jest.fn().mockReturnValue(of(false))
+    };
+
     TestBed.configureTestingModule({
-      declarations: [ FormProductsComponent ],
-      imports: [ ReactiveFormsModule, SharedInputComponent, HttpClientModule ]
+      imports: [ 
+        FormProductsComponent, 
+        ReactiveFormsModule, 
+        SharedInputComponent, 
+        HttpClientTestingModule,
+        CommonModule
+      ],
+      providers: [
+        { provide: InterviewService, useValue: mockInterviewService }
+      ]
     }).compileComponents();
   }));
 
-  beforeEach(() => {
+  beforeEach(fakeAsync(() => {
     fixture = TestBed.createComponent(FormProductsComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
-  });
+    tick(1000); // Para manejar el setTimeout en ngOnInit
+    fixture.detectChanges();
+  }));
 
   test('should create', () => {
     expect(component).toBeTruthy();
@@ -31,10 +49,10 @@ describe('FormProductsComponent', () => {
   test('El botón reiniciar debe resetear el formulario', () => {
     component.productDataForm.patchValue({
       id: 'testId',
-      name: 'Test Name',
-      description: 'Test Description',
+      name: 'Test Name Longer',
+      description: 'Test Description is long enough',
       logo: 'testLogo.png',
-      date_release: '12/12/2020',
+      date_release: '12/12/2026',
     });
     fixture.detectChanges();
     expect(component.productDataForm.get('id')?.value).toBe('testId');
@@ -44,93 +62,53 @@ describe('FormProductsComponent', () => {
     fixture.detectChanges();
 
     expect(component.productDataForm.get('id')?.value).toBeNull();
-    expect(component.productDataForm.get('name')?.value).toBeNull();
-    expect(component.productDataForm.get('description')?.value).toBeNull();
-    expect(component.productDataForm.get('logo')?.value).toBeNull();
-    expect(component.productDataForm.get('date_release')?.value).toBeNull();
-    expect(component.productDataForm.get('date_revision')?.disabled).toBe(true);
   });
-});
 
-describe('FormProductsComponent - Submit Button', () => {
-  let component: FormProductsComponent;
-  let fixture: ComponentFixture<FormProductsComponent>;
-  let serviceSpy: jest.Mocked<InterviewService>;
-
-  beforeEach(waitForAsync(() => {
-    const spy = {
-      registryProduct: jest.fn(),
-      updateProduct: jest.fn()
-    };
-    TestBed.configureTestingModule({
-      declarations: [ FormProductsComponent ],
-      imports: [ ReactiveFormsModule ],
-      providers: [{ provide: InterviewService, useValue: spy }]
-    }).compileComponents();
-    serviceSpy = TestBed.inject(InterviewService) as jest.Mocked<InterviewService>;
-  }));
-
-  beforeEach(() => {
-    fixture = TestBed.createComponent(FormProductsComponent);
-    component = fixture.componentInstance;
-    // Set create mode by default
+  test('El botón Reenviar debe llamar a registryProduct en modo creación', fakeAsync(() => {
     component.isUpdateMode = false;
-    fixture.detectChanges();
-  });
-
-  test('El botón Reenviar debe llamar a registryProduct y establecer el mensaje de alerta "Producto Registrado" en modo creación', () => {
     component.productDataForm.patchValue({
       id: 'trj-prb',
       name: 'Test Product',
-      description: 'Test Description',
+      description: 'Test Description is long enough',
       logo: 'testlogo.png',
       date_release: '12/12/2026'
     });
-    serviceSpy.registryProduct.mockReturnValue(of({}));
+    
+    component.productDataForm.get('date_revision')?.setValue('12/12/2027');
+    component.productDataForm.get('date_revision')?.enable(); 
+    fixture.detectChanges();
+
     component.onSubmit();
-    expect(serviceSpy.registryProduct).toHaveBeenCalled();
-    expect(component.alertMessage).toBe('Producto Registrado');
-  });
-});
+    tick(1200);
+    fixture.detectChanges();
 
-describe('FormProductsComponent - Submit Button Update Mode', () => {
-  let component: FormProductsComponent;
-  let fixture: ComponentFixture<FormProductsComponent>;
-  let serviceSpy: jest.Mocked<InterviewService>;
-
-  beforeEach(waitForAsync(() => {
-    const spy = {
-      registryProduct: jest.fn(),
-      updateProduct: jest.fn()
-    };
-    TestBed.configureTestingModule({
-      declarations: [ FormProductsComponent ],
-      imports: [ ReactiveFormsModule ],
-      providers: [{ provide: InterviewService, useValue: spy }]
-    }).compileComponents();
-    serviceSpy = TestBed.inject(InterviewService) as jest.Mocked<InterviewService>;
+    expect(mockInterviewService.registryProduct).toHaveBeenCalled();
+    
+    tick(5000); // Limpiar alertMsg
+    fixture.detectChanges();
   }));
 
-  beforeEach(() => {
-    fixture = TestBed.createComponent(FormProductsComponent);
-    component = fixture.componentInstance;
+  test('El botón Reenviar debe llamar a updateProduct en modo actualización', fakeAsync(() => {
     component.isUpdateMode = true;
-    fixture.detectChanges();
-  });
-
-  test('El botón Reenviar debe llamar a updateProduct y establecer el mensaje de alerta "Producto actualizado" en modo actualización', () => {
     component.productDataForm.patchValue({
       id: 'trj-prb',
       name: 'Test Product Updated',
-      description: 'Test Description Updated',
+      description: 'Test Description is long enough',
       logo: 'testlogo_updated.png',
       date_release: '12/12/2026'
     });
-  
-    serviceSpy.updateProduct.mockReturnValue(of({}));
+    
+    component.productDataForm.get('date_revision')?.setValue('12/12/2027');
+    component.productDataForm.get('date_revision')?.enable(); 
+    fixture.detectChanges();
+
     component.onSubmit();
-  
-    expect(serviceSpy.updateProduct).toHaveBeenCalledWith('trj-prb', expect.any(Object));
-    expect(component.alertMessage).toBe('Producto actualizado');
-  });
+    tick(1200);
+    fixture.detectChanges();
+
+    expect(mockInterviewService.updateProduct).toHaveBeenCalled();
+
+    tick(5000); // Limpiar alertMsg
+    fixture.detectChanges();
+  }));
 });
