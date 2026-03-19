@@ -51,13 +51,29 @@ export class TableProductsComponent implements OnInit {
   get filteredProducts(): ProductI[] {
     if (!this.searchQuery) return this.products;
     const query = this.searchQuery.toLowerCase();
+
+    // Soportamos tanto string como Date para evitar errores de TypeScript
+    const formatDate = (dateValue?: any) => {
+      if (!dateValue) return '';
+      
+      // Si es un objeto Date, lo formateamos usando sus métodos locales
+      if (dateValue instanceof Date) {
+        const d = String(dateValue.getDate()).padStart(2, '0');
+        const m = String(dateValue.getMonth() + 1).padStart(2, '0');
+        const y = dateValue.getFullYear();
+        return `${d}/${m}/${y}`;
+      }
+      
+      // Si viene como string desde el JSON
+      const [year, month, day] = String(dateValue).split('T')[0].split('-');
+      return `${day}/${month}/${year}`;
+    };
+
     return this.products.filter(product => {
-      const releaseDate = product.date_release ? new Date(product.date_release).toLocaleDateString('en-GB') : '';
-      const revisionDate = product.date_revision ? new Date(product.date_revision).toLocaleDateString('en-GB') : '';
       return product.name.toLowerCase().includes(query) ||
              product.description.toLowerCase().includes(query) ||
-             releaseDate.toLowerCase().includes(query) ||
-             revisionDate.toLowerCase().includes(query);
+             formatDate(product.date_release).includes(query) ||
+             formatDate(product.date_revision).includes(query);
     });
   }
 
